@@ -50,6 +50,7 @@
 #include "socket.h"
 #include "utils.h"
 #include "ntlm.h"
+#include "basic.h"
 #include "swap.h"
 #include "config.h"
 #include "acl.h"
@@ -668,7 +669,7 @@ bailout:
 
 int main(int argc, char **argv) {
 	char *tmp, *head;
-	char *cpassword, *cpassntlm2, *cpassnt, *cpasslm;
+	char *cpassword, *cpassntlm2, *cpassnt, *cpasslm, *cpassbasic;
 	char *cuser, *cdomain, *cworkstation, *cuid, *cpidfile, *cauth;
 	struct passwd *pw;
 	struct termios termold, termnew;
@@ -704,6 +705,7 @@ int main(int argc, char **argv) {
 	cpassntlm2 = new(MINIBUF_SIZE);
 	cpassnt = new(MINIBUF_SIZE);
 	cpasslm = new(MINIBUF_SIZE);
+	cpassbasic = new(BUFSIZE);
 	cworkstation = new(MINIBUF_SIZE);
 	cpidfile = new(MINIBUF_SIZE);
 	cuid = new(MINIBUF_SIZE);
@@ -890,8 +892,8 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Usage: %s [-AaBcDdFfgHhILlMPpSsTUuvw] <proxy_host>[:]<proxy_port> ...\n", argv[0]);
 		fprintf(stderr, "\t-A  <address>[/<net>]\n"
 				"\t    ACL allow rule. IP or hostname, net must be a number (CIDR notation)\n");
-		fprintf(stderr, "\t-a  ntlm | nt | lm\n"
-				"\t    Authentication type - combined NTLM, just LM, or just NT. Default NTLM.\n"
+		fprintf(stderr, "\t-a  ntlm | nt | lm | basic\n"
+				"\t    Authentication type - combined NTLM, just LM, or just NT, or BASIC. Default NTLM.\n"
 				"\t    It is the most versatile setting and likely to work for you.\n");
 		fprintf(stderr, "\t-B  Enable NTLM-to-basic authentication.\n");
 		fprintf(stderr, "\t-c  <config_file>\n"
@@ -1104,6 +1106,7 @@ int main(int argc, char **argv) {
 		CFG_DEFAULT(cf, "PassNTLMv2", cpassntlm2, MINIBUF_SIZE);
 		CFG_DEFAULT(cf, "PassNT", cpassnt, MINIBUF_SIZE);
 		CFG_DEFAULT(cf, "PassLM", cpasslm, MINIBUF_SIZE);
+		CFG_DEFAULT(cf, "PassBASIC", cpassbasic, BUFSIZE);
 		CFG_DEFAULT(cf, "Username", cuser, MINIBUF_SIZE);
 		CFG_DEFAULT(cf, "Workstation", cworkstation, MINIBUF_SIZE);
 		
@@ -1212,22 +1215,32 @@ int main(int argc, char **argv) {
 			g_creds->hashnt = 1;
 			g_creds->hashlm = 1;
 			g_creds->hashntlm2 = 0;
+			g_creds->hashbasic = 0;
 		} else if (!strcasecmp("nt", cauth)) {
 			g_creds->hashnt = 1;
 			g_creds->hashlm = 0;
 			g_creds->hashntlm2 = 0;
+			g_creds->hashbasic = 0;
 		} else if (!strcasecmp("lm", cauth)) {
 			g_creds->hashnt = 0;
 			g_creds->hashlm = 1;
 			g_creds->hashntlm2 = 0;
+			g_creds->hashbasic = 0;
 		} else if (!strcasecmp("ntlmv2", cauth)) {
 			g_creds->hashnt = 0;
 			g_creds->hashlm = 0;
 			g_creds->hashntlm2 = 1;
+			g_creds->hashbasic = 0;
 		} else if (!strcasecmp("ntlm2sr", cauth)) {
 			g_creds->hashnt = 2;
 			g_creds->hashlm = 0;
 			g_creds->hashntlm2 = 0;
+			g_creds->hashbasic = 0;
+		} else if (!strcasecmp("basic", cauth)) {
+			g_creds->hashnt = 0;
+			g_creds->hashlm = 0;
+			g_creds->hashntlm2 = 0;
+			g_creds->hashbasic = 1;
 		} else {
 			syslog(LOG_ERR, "Unknown NTLM auth combination.\n");
 			myexit(1);
@@ -1238,8 +1251,8 @@ int main(int argc, char **argv) {
 		syslog(LOG_WARNING, "SOCKS5 proxy will NOT require any authentication\n");
 
 	if (!magic_detect)
-		syslog(LOG_INFO, "Using following NTLM hashes: NTLMv2(%d) NT(%d) LM(%d)\n",
-			g_creds->hashntlm2, g_creds->hashnt, g_creds->hashlm);
+		syslog(LOG_INFO, "Using following NTLM hashes: NTLMv2(%d) NT(%d) LM(%d) BASIC(%d)\n",
+			g_creds->hashntlm2, g_creds->hashnt, g_creds->hashlm, g_creds->hashbasic);
 
 	if (cflags) {
 		syslog(LOG_INFO, "Using manual NTLM flags: 0x%X\n", swap32(cflags));
@@ -1301,6 +1314,10 @@ int main(int argc, char **argv) {
 			auth_memcpy(g_creds, passlm, tmp, 16);
 			free(tmp);
 		}
+		if (strlen(cpassbasic)) {
+			if (strlen(cpassbasic) < BUFSIZE)
+				auth_strcpy(g_creds, passbasic, cpassbasic);
+		}
 	} else {
 		if (g_creds->hashnt || magic_detect || interactivehash) {
 			tmp = ntlm_hash_nt_password(cpassword);
@@ -1314,6 +1331,17 @@ int main(int argc, char **argv) {
 			tmp = ntlm2_hash_password(cuser, cdomain, cpassword);
 			auth_memcpy(g_creds, passntlm2, tmp, 16);
 			free(tmp);
+		} if (g_creds->hashbasic || magic_detect || interactivehash) {
+			tmp = basic_hash_password(cuser, cdomain, cpassword);
+			if (tmp) {
+				if (strlen(tmp) < BUFSIZE) {
+					auth_strcpy(g_creds, passbasic, tmp);
+				} else {
+					free(tmp);
+					exit(1);
+				}
+				free(tmp);
+			}
 		}
 		memset(cpassword, 0, strlen(cpassword));
 	}
@@ -1329,6 +1357,7 @@ int main(int argc, char **argv) {
 	free(cpassntlm2);
 	free(cpassnt);
 	free(cpasslm);
+	free(cpassbasic);
 	free(cauth);
 
 	/*
