@@ -909,7 +909,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "\t-G  <pattern>\n"
 				"\t    User-Agent matching for the trans-isa-scan plugin.\n");
 		fprintf(stderr, "\t-g  Gateway mode - listen on all interfaces, not only loopback.\n");
-		fprintf(stderr, "\t-H  Print password hashes for use in config file (NTLMv2 needs -u and -d).\n");
+		fprintf(stderr, "\t-H  Print password hashes for use in config file (NTLMv2 needs -u and -d) (BASIC needs -u).\n");
 		fprintf(stderr, "\t-h  Print this help info along with version number.\n");
 		fprintf(stderr, "\t-I  Prompt for the password interactively.\n");
 		fprintf(stderr, "\t-L  [<saddr>:]<lport>:<rhost>:<rport>\n"
@@ -1387,6 +1387,11 @@ int main(int argc, char **argv) {
 			printf("PassNTLMv2      %s    # Only for user '%s', domain '%s'\n",
 				tmp, g_creds->user, g_creds->domain);
 			free(tmp);
+		}
+
+		if (g_creds->passbasic) {
+			printf("PassBASIC       %s    # Only for user '%s'\n",
+				g_creds->passbasic, g_creds->user);
 		}
 		goto bailout;
 	}
