@@ -846,7 +846,7 @@ bailout:
 	return;
 }
 
-#define MAGIC_TESTS	5
+#define MAGIC_TESTS	6
 
 void magic_auth_detect(const char *url) {
 	int i, nc, c, ign = 0, found = -1;
@@ -854,14 +854,15 @@ void magic_auth_detect(const char *url) {
 	char *tmp, *pos, *host = NULL;
 
 	struct auth_s *tcreds;
-	char *authstr[5] = { "NTLMv2", "NTLM", "LM", "NT", "NTLM2SR" };
-	int prefs[MAGIC_TESTS][5] = {
-		/* NT, LM, NTLMv2, Flags, index to authstr[] */
-		{  0,  0,  1,      0,     0 },
-		{  1,  1,  0,      0,     1 },
-		{  0,  1,  0,      0,     2 },
-		{  1,  0,  0,      0,     3 },
-		{  2,  0,  0,      0,     4 }
+	char *authstr[6] = { "NTLMv2", "NTLM", "LM", "NT", "NTLM2SR", "BASIC" };
+	int prefs[MAGIC_TESTS][6] = {
+		/* NT, LM, NTLMv2, Basic, Flags, index to authstr[] */
+		{  0,  0,  1,      0,     0,     0 },
+		{  1,  1,  0,      0,     0,     1 },
+		{  0,  1,  0,      0,     0,     2 },
+		{  1,  0,  0,      0,     0,     3 },
+		{  2,  0,  0,      0,     0,     4 },
+		{  0,  0,  0,      1,     0,     5 }
 	};
 
 	tcreds = new_auth();
@@ -896,7 +897,8 @@ void magic_auth_detect(const char *url) {
 		tcreds->hashnt = prefs[i][0];
 		tcreds->hashlm = prefs[i][1];
 		tcreds->hashntlm2 = prefs[i][2];
-		tcreds->flags = prefs[i][3];
+		tcreds->hashbasic = prefs[i][3];
+		tcreds->flags = prefs[i][4];
 
 		printf("Config profile %2d/%d... ", i+1, MAGIC_TESTS);
 
@@ -912,13 +914,24 @@ void magic_auth_detect(const char *url) {
 		}
 
 		c = proxy_authenticate(&nc, req, res, tcreds);
-		if (c && res->code != 407) {
+		if (c && res->code != 407 && !tcreds->hashbasic) {
 			ign++;
 			printf("Auth not required (HTTP code: %d)\n", res->code);
 			free_rr_data(res);
 			free_rr_data(req);
 			close(nc);
 			continue;
+		}
+
+		if (c && tcreds->hashbasic && res->code == 200) {
+			printf("OK (HTTP code: %d)\n", res->code);
+			if (found < 0) {
+				found = i;
+				free_rr_data(res);
+				free_rr_data(req);
+				close(nc);
+				break;
+			}
 		}
 
 		reset_rr_data(res);
@@ -953,8 +966,8 @@ void magic_auth_detect(const char *url) {
 
 	if (found > -1) {
 		printf("----------------------------[ Profile %2d ]------\n", found);
-		printf("Auth            %s\n", authstr[prefs[found][4]]);
-		if (prefs[found][3])
+		printf("Auth            %s\n", authstr[prefs[found][5]]);
+		if (prefs[found][4])
 			printf("Flags           0x%x\n", prefs[found][3]);
 		if (prefs[found][0]) {
 			printf("PassNT          %s\n", tmp=printmem(tcreds->passnt, 16, 8));
@@ -968,6 +981,8 @@ void magic_auth_detect(const char *url) {
 			printf("PassNTLMv2      %s\n", tmp=printmem(tcreds->passntlm2, 16, 8));
 			free(tmp);
 		}
+		if (prefs[found][3])
+			printf("PassBASIC       %s\n", tcreds->passbasic);
 		printf("------------------------------------------------\n");
 	} else if (ign == MAGIC_TESTS) {
 		printf("\nYour proxy is open, you don't need another proxy.\n");
