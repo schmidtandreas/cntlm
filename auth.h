@@ -41,9 +41,11 @@ struct auth_s {
 	char passlm[MINIBUF_SIZE];
 	char passnt[MINIBUF_SIZE];
 	char passntlm2[MINIBUF_SIZE];
+	char passbasic[BUFSIZE];
 	int hashntlm2;
 	int hashnt;
 	int hashlm;
+	int hashbasic;
 #ifdef __CYGWIN__
 	struct sspi_handle sspi;
 #endif

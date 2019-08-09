@@ -39,12 +39,14 @@ struct auth_s *new_auth(void) {
 	memset(tmp->passntlm2, 0, MINIBUF_SIZE);
 	memset(tmp->passnt, 0, MINIBUF_SIZE);
 	memset(tmp->passlm, 0, MINIBUF_SIZE);
+	memset(tmp->passbasic, 0, BUFSIZE);
 #ifdef __CYGWIN__	
 	memset(&tmp->sspi, 0, sizeof(struct sspi_handle));
 #endif
 	tmp->hashntlm2 = 1;
 	tmp->hashnt = 0;
 	tmp->hashlm = 0;
+	tmp->hashbasic = 0;
 	tmp->flags = 0;
 
 	return tmp;
@@ -54,6 +56,7 @@ struct auth_s *copy_auth(struct auth_s *dst, struct auth_s *src, int fullcopy) {
 	dst->hashntlm2 = src->hashntlm2;
 	dst->hashnt = src->hashnt;
 	dst->hashlm = src->hashlm;
+	dst->hashbasic = src->hashbasic;
 	dst->flags = src->flags;
 
 	strlcpy(dst->domain, src->domain, MINIBUF_SIZE);
@@ -67,11 +70,14 @@ struct auth_s *copy_auth(struct auth_s *dst, struct auth_s *src, int fullcopy) {
 			memcpy(dst->passnt, src->passnt, MINIBUF_SIZE);
 		if (src->passlm)
 			memcpy(dst->passlm, src->passlm, MINIBUF_SIZE);
+		if (src->passbasic)
+			memcpy(dst->passbasic, src->passbasic, BUFSIZE);
 	} else {
 		memset(dst->user, 0, MINIBUF_SIZE);
 		memset(dst->passntlm2, 0, MINIBUF_SIZE);
 		memset(dst->passnt, 0, MINIBUF_SIZE);
 		memset(dst->passlm, 0, MINIBUF_SIZE);
+		memset(dst->passbasic, 0, BUFSIZE);
 	}
 
 	return dst;
