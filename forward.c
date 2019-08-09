@@ -142,11 +142,16 @@ int proxy_authenticate(int *sd, rr_data_t request, rr_data_t response, struct au
 
 	buf = new(BUFSIZE);
 
-	strcpy(buf, "NTLM ");
-	len = ntlm_request(&tmp, credentials);
-	if (len) {
-		to_base64(MEM(buf, uint8_t, 5), MEM(tmp, uint8_t, 0), len, BUFSIZE-5);
-		free(tmp);
+	if (!credentials->hashbasic) {
+		strcpy(buf, "NTLM ");
+		len = ntlm_request(&tmp, credentials);
+		if (len) {
+			to_base64(MEM(buf, uint8_t, 5), MEM(tmp, uint8_t, 0), len, BUFSIZE-5);
+			free(tmp);
+		}
+	} else {
+		strcpy(buf, "BASIC ");
+		snprintf(buf + 6, BUFSIZE, "%s", credentials->passbasic);
 	}
 
 	auth = dup_rr_data(request);
