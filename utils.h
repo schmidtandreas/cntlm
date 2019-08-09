@@ -152,6 +152,8 @@ extern void free_rr_data(rr_data_t data);
 extern char *printmem(char *src, size_t len, int bitwidth);
 extern char *scanmem(char *src, int bitwidth);
 
+extern unsigned int b64e_size(unsigned int in_size);
+extern unsigned int b64d_size(unsigned int in_size);
 extern void to_base64(unsigned char *out, const unsigned char *in, size_t len, size_t olen);
 extern int from_base64(char *out, const char *in);
 

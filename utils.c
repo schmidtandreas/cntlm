@@ -889,6 +889,22 @@ void to_base64(unsigned char *out, const unsigned char *in, size_t len, size_t o
 	*out = '\0';
 }
 
+unsigned int b64e_size(unsigned int in_size) {
+
+	// size equals 4*floor((1/3)*(in_size+2));
+	int i, j = 0;
+	for (i=0;i<in_size;i++) {
+		if (i % 3 == 0)
+		j += 1;
+	}
+	return (4*j);
+}
+
+unsigned int b64d_size(unsigned int in_size) {
+
+	return ((3*in_size)/4);
+}
+
 /* Convert '\0'-terminated base 64 string to raw bytes.
  * Returns length of returned buffer, or -1 on error */
 int from_base64(char *out, const char *in)
