@@ -65,12 +65,12 @@ install: $(NAME)
 		install -d -m 755 -s $(NAME) $(BINDIR)/$(NAME); \
 		install -d -m 644 doc/$(NAME).1 $(MANDIR)/man1/$(NAME).1; \
 		[ -f $(SYSCONFDIR)/$(NAME).conf -o -z "$(SYSCONFDIR)" ] \
-			|| install -d -m 600 doc/$(NAME).conf $(SYSCONFDIR)/$(NAME).conf; \
+			|| install -d -m 644 doc/$(NAME).conf $(SYSCONFDIR)/$(NAME).conf; \
 	else \
 		install -D -m 755 -s $(NAME) $(BINDIR)/$(NAME); \
 		install -D -m 644 doc/$(NAME).1 $(MANDIR)/man1/$(NAME).1; \
 		[ -f $(SYSCONFDIR)/$(NAME).conf -o -z "$(SYSCONFDIR)" ] \
-			|| install -D -m 600 doc/$(NAME).conf $(SYSCONFDIR)/$(NAME).conf; \
+			|| install -D -m 644 doc/$(NAME).conf $(SYSCONFDIR)/$(NAME).conf; \
 	fi
 	@echo; echo "Cntlm will look for configuration in $(SYSCONFDIR)/$(NAME).conf"
 
