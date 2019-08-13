@@ -20,10 +20,9 @@ configure-stamp:
 	dh_testdir
 	# Add here commands to configure the package.
 	./configure
-	touch configure-stamp
+	touch $@
 
 build: build-stamp
-
 build-stamp: configure-stamp
 	dh_testdir
 
@@ -52,11 +51,11 @@ install: build
 	$(MAKE) DESTDIR=$(CURDIR)/debian/cntlm install
 
 # Build architecture-independent files here.
-binary-indep: build install
+binary-indep: install
 # We have nothing to do by default.
 
 # Build architecture-dependent files here.
-binary-arch: build install
+binary-arch: install
 	dh_testdir
 	dh_testroot
 	dh_installchangelogs 
@@ -64,7 +63,9 @@ binary-arch: build install
 	dh_install
 	cp debian/lintian-override debian/cntlm/usr/share/lintian/overrides/cntlm
 	dh_installdebconf	
+	dh_systemd_enable
 	dh_installinit -n
+	dh_systemd_start
 	dh_installman doc/cntlm.1
 	dh_link
 	dh_strip

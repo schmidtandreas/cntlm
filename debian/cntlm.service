@@ -1,0 +1,15 @@
+[Unit]
+Description=cntlm service
+After=syslog.target network-online.target
+
+[Service]
+Type=forking
+PermissionsStartOnly=True
+User=cntlm
+Group=daemon
+RuntimeDirectory=cntlm
+RuntimeDirectoryMode=0755
+ExecStart=/usr/sbin/cntlm -c /etc/cntlm.conf -P /run/cntlm/cntlmd.pid
+
+[Install]
+WantedBy=multi-user.target
