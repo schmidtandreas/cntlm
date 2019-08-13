@@ -1,4 +1,6 @@
 **.o
+*.deb
+tags
 cntlm
 config/config.h
 config/configure-stamp
